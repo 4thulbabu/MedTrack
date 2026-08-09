@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>MedTrack | Find Medicine Instantly</title>
+    <style>
+        :root {
+            --standard-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            --primary-blue: #3b82f6;
+            --accent-green: #10b981;
+        }
+
+        body {
+            font-family: var(--standard-font);
+            min-height: 100vh;
+            background: #f8fafc;
+        }
+
+        /* Hero Styling */
+        .hero-section {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+            padding: 80px 0 120px;
+            text-align: center;
+        }
+
+        /* Search Card */
+        .search-card {
+            margin-top: -60px;
+            border-radius: 24px;
+            background: #ffffff;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border: none;
+            z-index: 10;
+        }
+
+        .input-group-text { background: #f8fafc; border-right: none; color: #94a3b8; }
+        .form-control { border-left: none; background: #f8fafc; }
+        .form-control:focus { background: #fff; box-shadow: none; border-color: #dee2e6; }
+
+        /* Results Styling */
+        .result-card {
+            background: white;
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+
+        .result-card:hover { transform: translateY(-4px); }
+        .price-text { font-size: 1.5rem; font-weight: 800; color: var(--accent-green); }
+        .badge-stock { font-weight: 600; font-size: 0.85rem; }
+        .btn-connect { border-radius: 12px; font-weight: 600; transition: 0.3s; }
+
+        /* Loading States */
+        .loading-spinner { display: none; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark py-3">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/">
+            <i class="fas fa-clinic-medical me-2 text-primary"></i>MedTrack
+        </a>
+        <div class="ms-auto">
+            <a href="/login" class="btn btn-outline-light btn-sm rounded-pill px-3 me-2">Login</a>
+            <a href="/register" class="btn btn-primary btn-sm rounded-pill px-3">Join as Pharmacy</a>
+        </div>
+    </div>
+</nav>
+
+<div class="hero-section">
+    <div class="container">
+        <h1 class="display-5 fw-bold mb-3">Find Your Medicine</h1>
+        <p class="lead opacity-75">Instant stock check across local pharmacies in your area</p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="card search-card p-4 mx-auto" style="max-width: 900px;">
+        <form action="/" method="GET" class="row g-3" onsubmit="showLoading()">
+            <div class="col-md-5">
+                <label class="form-label small fw-bold text-muted text-uppercase">Medicine Name</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" name="search" list="med-recommendations" class="form-control"
+                           placeholder="e.g. Paracetamol" required value="{{ request.args.get('search', '') }}">
+                </div>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label small fw-bold text-muted text-uppercase">Area / City</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                    <input type="text" name="location" class="form-control"
+                           placeholder="e.g. Kayakulam" value="{{ request.args.get('location', '') }}">
+                </div>
+            </div>
+            <div class="col-md-2 d-grid align-self-end">
+                <button type="submit" class="btn btn-primary py-2 fw-bold">
+                    <span class="search-text">Search</span>
+                    <span class="loading-spinner"><span class="spinner-border spinner-border-sm"></span></span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="mt-5">
+        {% if results %}
+            <h5 class="mb-4 fw-bold text-dark"><i class="fas fa-list me-2"></i>Available Stock Nearby</h5>
+            <div class="row g-4">
+                {% for row in results %}
+                <div class="col-12">
+                    <div class="card result-card p-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <h5 class="fw-bold mb-1 text-capitalize">{{ row.name }}</h5>
+                                <p class="text-muted small mb-3">
+                                    <i class="fas fa-location-dot me-1 text-primary"></i> {{ row.location }}
+                                </p>
+                                <div class="d-flex gap-3">
+                                    <a href="tel:{{ row.contact }}" class="text-decoration-none small fw-bold">
+                                        <i class="fas fa-phone me-1"></i> Call
+                                    </a>
+                                    <a href="mailto:{{ row.email }}?subject=Availability Inquiry: {{ row.med_name|capitalize }}"
+                                       class="text-decoration-none small fw-bold text-secondary">
+                                        <i class="fas fa-envelope me-1"></i> Email
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3 text-center border-start border-end">
+                                <span class="text-muted small text-uppercase fw-bold d-block">Medicine</span>
+                                <h5 class="fw-bold text-capitalize mt-1">{{ row.med_name }}</h5>
+                                <span class="badge badge-stock {% if row.stock_count > 5 %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %} px-3 py-2 rounded-pill mt-2">
+                                    {{ row.stock_count }} Units in Stock
+                                </span>
+                            </div>
+
+                            <div class="col-md-2 text-center">
+                                <span class="text-muted small text-uppercase fw-bold d-block">Price</span>
+                                <span class="price-text">₹{{ "{:,.2f}".format(row.price) }}</span>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="d-grid gap-2">
+                                    <a href="https://wa.me/91{{ row.contact|replace(' ', '')|replace('-', '') }}?text=Hi, I found your shop on MedTrack. Is {{ row.med_name|capitalize }} available?"
+                                       target="_blank" class="btn btn-connect btn-success">
+                                        <i class="fab fa-whatsapp me-2"></i>WhatsApp Chat
+                                    </a>
+                                    <a href="{{ row.map_url }}" target="_blank" class="btn btn-connect btn-primary">
+                                        <i class="fas fa-directions me-2"></i>View on Map
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% elif request.args.get('search') %}
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-search-minus fa-4x text-muted opacity-25"></i>
+                </div>
+                <h4 class="fw-bold">No matches found</h4>
+                <p class="text-muted">We couldn't find <strong>{{ request.args.get('search') }}</strong> in <strong>{{ request.args.get('location') or 'your area' }}</strong>.</p>
+                <a href="/" class="btn btn-dark rounded-pill px-4 mt-2">Clear Search</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<datalist id="med-recommendations">
+    {% for med in all_meds %}
+    <option value="{{ med|capitalize }}">
+    {% endfor %}
+</datalist>
+
+<script>
+    function showLoading(){
+        document.querySelector(".search-text").style.display = "none";
+        document.querySelector(".loading-spinner").style.display = "inline";
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Full Inventory | {{ shop.name }}</title>
+    <style>
+        :root {
+            --brand-dark: #1e293b;
+            --brand-primary: #3b82f6;
+        }
+        body { background: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .inventory-container { max-width: 1000px; margin: 40px auto; }
+        .card { border-radius: 20px; border: none; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); overflow: hidden; }
+        .shop-header { background: var(--brand-dark); color: white; padding: 30px; border-bottom: 4px solid var(--brand-primary); }
+        .search-bar { border-radius: 12px; border: 1px solid #e2e8f0; padding: 12px 20px 12px 45px; background: #fff; }
+        .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        .table thead th { background: #f1f5f9; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; color: #64748b; border: none; }
+        .status-badge { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+<div class="container inventory-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="/dashboard" class="btn btn-link text-decoration-none text-muted p-0">
+            <i class="fas fa-chevron-left me-2"></i>Back to Dashboard
+        </a>
+        <button onclick="window.print()" class="btn btn-outline-primary btn-sm rounded-pill">
+            <i class="fas fa-print me-2"></i>Print Report
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="shop-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="fw-bold mb-1 text-capitalize">{{ shop.name }}</h2>
+                    <p class="mb-0 opacity-75 small">
+                        <i class="fas fa-map-marker-alt me-1"></i> {{ shop.location }} |
+                        <i class="fas fa-id-badge me-1 ms-2"></i> ID: {{ shop.shop_id }}
+                    </p>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <div class="h4 mb-0 fw-bold">{{ stocks|length }}</div>
+                    <div class="small opacity-75 text-uppercase">Total Products</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="position-relative mb-4">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="inventorySearch" class="form-control search-bar" placeholder="Search by medicine name...">
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="inventoryTable">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Medicine Details</th>
+                            <th class="text-center">Current Stock</th>
+                            <th class="text-center">Price (INR)</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in stocks %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="fw-bold text-dark text-capitalize">{{ item.med_name }}</div>
+                                <div class="text-muted small">ID: #MED-{{ loop.index + 100 }}</div>
+                            </td>
+                            <td class="text-center">
+                                <span class="fw-bold">{{ item.stock_count }}</span>
+                                <span class="text-muted small"> units</span>
+                            </td>
+                            <td class="text-center fw-bold text-primary">
+                                ₹{{ "{:,.2f}".format(item.price) }}
+                            </td>
+                            <td class="text-center">
+                                {% if item.stock_count > 15 %}
+                                    <span class="badge bg-success-subtle text-success status-badge rounded-pill px-3">In Stock</span>
+                                {% elif item.stock_count > 0 %}
+                                    <span class="badge bg-warning-subtle text-warning status-badge rounded-pill px-3">Low Stock</span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger status-badge rounded-pill px-3">Out of Stock</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="fas fa-box-open fa-3x mb-3 opacity-25"></i>
+                                <p>Your inventory is currently empty.</p>
+                                <a href="/dashboard" class="btn btn-primary btn-sm">Add First Medicine</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('inventorySearch').addEventListener('keyup', function() {
+    let filter = this.value.toLowerCase();
+    let rows = document.querySelectorAll('#inventoryTable tbody tr');
+
+    rows.forEach(row => {
+        let name = row.querySelector('td:first-child').textContent.toLowerCase();
+        row.style.display = name.includes(filter) ? '' : 'none';
+    });
+});
+</script>
+
+</body>
+</html>

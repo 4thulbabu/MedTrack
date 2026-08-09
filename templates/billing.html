@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Create Bill | {{ shop_name }}</title>
+    <style>
+        body { background: #f8fafc; font-family: -apple-system, sans-serif; }
+        .billing-card { border-radius: 20px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .shop-info-header { background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 25px; border-radius: 20px 20px 0 0; }
+        .shop-id-badge { font-size: 0.85rem; background: #f1f5f9; color: #64748b; padding: 6px 16px; border-radius: 50px; border: 1px solid #e2e8f0; }
+        .item-row { transition: all 0.2s; border-radius: 12px; padding: 10px; margin-bottom: 10px; border: 1px solid transparent; }
+        .item-row:hover { background-color: #ffffff; border-color: #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .is-invalid-stock { border-color: #ef4444 !important; background-color: #fef2f2 !important; color: #b91c1c; }
+        .stock-label { font-size: 0.75rem; display: block; margin-top: 4px; }
+
+        @media print {
+            .btn, .nav-btns, .fa-trash-alt, hr, .add-row-btn { display: none !important; }
+            body { background: white; padding: 0; }
+            .container { width: 100%; max-width: 100%; }
+            .billing-card { box-shadow: none; }
+            .form-control { border: none !important; padding: 0 !important; background: transparent !important; }
+        }
+    </style>
+</head>
+<body class="py-5">
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card billing-card">
+                <div class="shop-info-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="fw-bold text-dark mb-1">{{ shop_name }}</h2>
+                        <span class="shop-id-badge"><i class="fas fa-id-badge me-2"></i>ID: <strong>{{ session['shop_id'] }}</strong></span>
+                    </div>
+                    <div class="nav-btns">
+                        <button type="button" class="btn btn-outline-primary rounded-pill me-2" onclick="window.print()">
+                            <i class="fas fa-print me-2"></i>Print
+                        </button>
+                        <a href="/dashboard" class="btn btn-dark rounded-pill">
+                            <i class="fas fa-times me-2"></i>Close
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <form action="/billing" method="POST" id="billingForm">
+                        <div id="billing-items">
+                            <div class="row g-3 item-row align-items-start">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-secondary">Medicine Name</label>
+                                    <input list="med-list" name="med_name[]" class="form-control med-input" placeholder="Search medicine..." required oninput="validateRow(this)">
+                                    <span class="stock-label text-muted"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-secondary">Quantity</label>
+                                    <input type="number" name="quantity[]" class="form-control qty-input" placeholder="0" min="1" required oninput="calculateTotal()">
+                                </div>
+                                <div class="col-md-2 pt-md-4 text-end">
+                                    <button type="button" class="btn btn-link text-danger p-0" onclick="removeRow(this)">
+                                        <i class="fas fa-trash-alt fa-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <datalist id="med-list">
+                            {% for item in available_items %}
+                            <option value="{{ item.med_name }}"
+                                    data-price="{{ item.price }}"
+                                    data-stock="{{ item.stock_count }}">
+                                ₹{{ item.price }} — (Available: {{ item.stock_count }})
+                            </option>
+                            {% endfor %}
+                        </datalist>
+
+                        <button type="button" class="btn btn-link text-decoration-none fw-bold add-row-btn" onclick="addRow()">
+                            <i class="fas fa-plus-circle me-1"></i> Add Another Item
+                        </button>
+
+                        <div class="mt-5 p-4 bg-light rounded-4 d-flex flex-column flex-md-row justify-content-between align-items-center">
+                            <div class="text-center text-md-start mb-3 mb-md-0">
+                                <p class="text-secondary mb-0 small fw-bold text-uppercase">Total Payable</p>
+                                <h1 class="mb-0 text-dark fw-bold" id="grand-total">₹0.00</h1>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-lg px-5 rounded-pill shadow-lg" id="submit-btn">
+                                Finalize & Deduct Stock <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Adds a new blank row
+    function addRow() {
+        const container = document.getElementById('billing-items');
+        const rows = document.querySelectorAll('.item-row');
+        const newRow = rows[0].cloneNode(true);
+
+        // Reset values
+        newRow.querySelector('.med-input').value = "";
+        newRow.querySelector('.qty-input').value = "";
+        newRow.querySelector('.stock-label').innerText = "";
+        newRow.querySelector('.qty-input').classList.remove('is-invalid-stock');
+
+        container.appendChild(newRow);
+    }
+
+    // Removes a row (prevents removing the last remaining row)
+    function removeRow(btn) {
+        const rows = document.querySelectorAll('.item-row');
+        if (rows.length > 1) {
+            btn.closest('.item-row').remove();
+            calculateTotal();
+        }
+    }
+
+    // Shows available stock hint when medicine is selected
+    function validateRow(input) {
+        const row = input.closest('.item-row');
+        const datalist = document.getElementById('med-list');
+        const stockLabel = row.querySelector('.stock-label');
+        const option = Array.from(datalist.options).find(opt => opt.value === input.value);
+
+        if (option) {
+            const stock = option.getAttribute('data-stock');
+            const price = option.getAttribute('data-price');
+            stockLabel.innerHTML = `<span class="text-success">In Stock: ${stock}</span> | Price: ₹${price}`;
+        } else {
+            stockLabel.innerText = "";
+        }
+        calculateTotal();
+    }
+
+    // Main calculation and stock validation logic
+    function calculateTotal() {
+        let grandTotal = 0;
+        let hasError = false;
+        const rows = document.querySelectorAll('.item-row');
+        const datalist = document.getElementById('med-list');
+
+        rows.forEach(row => {
+            const medName = row.querySelector('.med-input').value;
+            const qtyInput = row.querySelector('.qty-input');
+            const qty = parseInt(qtyInput.value) || 0;
+
+            const option = Array.from(datalist.options).find(opt => opt.value === medName);
+
+            if (option) {
+                const price = parseFloat(option.getAttribute('data-price'));
+                const maxStock = parseInt(option.getAttribute('data-stock'));
+
+                // Stock validation
+                if (qty > maxStock) {
+                    qtyInput.classList.add('is-invalid-stock');
+                    hasError = true;
+                } else {
+                    qtyInput.classList.remove('is-invalid-stock');
+                }
+                grandTotal += (price * qty);
+            }
+        });
+
+        document.getElementById('grand-total').innerText = '₹' + grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
+        document.getElementById('submit-btn').disabled = hasError;
+    }
+</script>
+</body>
+</html>
