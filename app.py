@@ -1,13 +1,20 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 import sqlite3
 import os
+import shutil
+import tempfile
 from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'med_app_secret_key_123')
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-DATABASE = 'pharmacy.db'
+# Vercel's filesystem is read-only except for /tmp, so use a writable path
+# and seed it from the bundled database on cold start.
+DATABASE = os.environ.get('DATABASE_PATH', os.path.join(tempfile.gettempdir(), 'pharmacy.db'))
+_BUNDLED_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pharmacy.db')
+if not os.path.exists(DATABASE) and os.path.exists(_BUNDLED_DB):
+    shutil.copyfile(_BUNDLED_DB, DATABASE)
 
 
 def get_db_connection():
@@ -165,13 +172,20 @@ def login():
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 import sqlite3
 import os
+import shutil
+import tempfile
 from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'med_app_secret_key_123')
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-DATABASE = 'pharmacy.db'
+# Vercel's filesystem is read-only except for /tmp, so use a writable path
+# and seed it from the bundled database on cold start.
+DATABASE = os.environ.get('DATABASE_PATH', os.path.join(tempfile.gettempdir(), 'pharmacy.db'))
+_BUNDLED_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pharmacy.db')
+if not os.path.exists(DATABASE) and os.path.exists(_BUNDLED_DB):
+    shutil.copyfile(_BUNDLED_DB, DATABASE)
 
 
 def get_db_connection():
