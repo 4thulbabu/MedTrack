@@ -12,6 +12,26 @@ MedTrack is a lightweight pharmacy inventory and sales management web app built 
 - **Sales reports** with daily revenue and transaction counts
 - **Account deletion** with cleanup of related inventory and sales data
 
+## Screenshots
+
+Screenshots from the live demo deployment.
+
+### Home — medicine search
+
+![MedTrack home page](screenshots/home.png)
+
+### Shop login
+
+![MedTrack login page](screenshots/login.png)
+
+### Shop registration
+
+![MedTrack registration page](screenshots/register.png)
+
+### Owner dashboard
+
+![MedTrack owner dashboard](screenshots/dashboard.png)
+
 ## Tech stack
 
 - Python 3
@@ -28,6 +48,7 @@ MedTrack is a lightweight pharmacy inventory and sales management web app built 
 ├── api/index.py         # Vercel Python entry point
 ├── pharmacy.db          # Bundled SQLite database (empty by default)
 ├── requirements.txt     # Python dependencies
+├── screenshots/         # README screenshots
 └── templates/           # Jinja2 HTML templates
 ```
 
